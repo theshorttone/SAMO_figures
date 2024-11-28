@@ -189,7 +189,14 @@ ggplot(summary_data_col_plot_filtered, aes(x = species, y = col_avg, fill = plot
     y = "Mean Colonization (%)",
     fill = "Plot"
   ) +
-  scale_fill_manual(values = color_mapping)
+  scale_fill_manual(values = color_mapping, labels = 
+                      c("3" = "3 innoculated" ,
+                       "6" = "6 innoculated" ,
+                       "8" = "8 innoculated" ,
+                       "4" = "4 control" ,
+                       "5"= "5 control" ,
+                       "7"= "7 control")
+                    )
 
 ##############
 
