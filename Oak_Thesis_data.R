@@ -4,10 +4,11 @@ if (!require("RColorBrewer")) {
   install.packages("RColorBrewer")
   library(RColorBrewer)
 }
+
 # purple_pal <- colorRampPalette(brewer.pal("Purples"))
 # orange_pal <-colorRampPalette(brewer.pal("Oranges"))
 colonization_data <- read_excel("/Users/zacharyshortt/Desktop/DNA_work_SMM/Colonization_data.xlsx")
-master_data <-read_excel("/Users/zacharyshortt/Desktop/DNA_work_SMM/Master_dataa.xlsx")
+master_data <-read_excel("/Users/zacharyshortt/Desktop/DNA_work_SMM/Master_dataaa.xlsx")
 
 combined_coldata <- colonization_data %>%
   group_by(`Tree code`) %>%
@@ -32,14 +33,18 @@ merged_data_all <- merged_data_all %>%
 merged_data_all <- merged_data_all %>%
   mutate(
     Heightin_6_8_24 = Heightin_6_8_24 * 2.54,
-    Heightin_12_18_23 = Heightin_12_18_23 * 2.54# Convert height to cm
+    Heightin_12_18_23 = Heightin_12_18_23 * 2.54,# Convert height to cm
+    Heightin_12_2024 = Heightin_12_18_23 * 2.54,
+    width_7_5_24 = width_7_5_24/10, #convert width to cm,
+    width_12_2024 = width_12_2024/10 #convert width to cm
+    
   )
 
 # Calculate radius and volume (cone model)
 merged_data_all <- merged_data_all %>%
   mutate(
-    radius = width_7_5_24 / 2,  # Radius in cm (width is already in cm)
-    volume = (1/3) * pi * (radius^2) * Heightin_6_8_24  # Volume calculation
+    radius = width_12_2024 / 2,  # Radius in mm (width is already in mm)
+    volume = (1/3) * pi * (radius^2) * Heightin_12_2024  # Volume calculation
   )
 
 # Plot the volume against species using ggplot2
@@ -56,13 +61,13 @@ ggplot(merged_data_all, aes(x = species, y = volume, fill = species)) +
 # Plot volume by species and innoculation status 
 # Step 1: Calculate mean and standard error for each species and inoculation status
 summary_data_growth <- merged_data_all %>%
-  filter(!is.na(Heightin_6_8_24)) %>%  # Ensure no NAs in height variable
+  filter(!is.na(Heightin_12_2024)) %>%  # Ensure no NAs in height variable
   group_by(species, innoculation) %>%
   summarise(
     mean_volume = mean(volume, na.rm = TRUE),  # Mean volume
     sd_volume = sd(volume, na.rm = TRUE),      # Standard deviation of volume
-    mean_height = mean(Heightin_6_8_24, na.rm = TRUE),  # Mean height
-    sd_height = sd(Heightin_6_8_24, na.rm = TRUE),      # Standard deviation of height
+    mean_height = mean(Heightin_12_2024, na.rm = TRUE),  # Mean height
+    sd_height = sd(Heightin_12_2024, na.rm = TRUE),      # Standard deviation of height
     n = n()  # Number of observations
   ) %>%
   mutate(
@@ -106,13 +111,13 @@ ggplot(summary_data_growth, aes(x = species, y = mean_height, fill = innoculatio
 
 ##separate out by plot now too
 summary_data_growth_plot <- merged_data_all %>%
-  filter(!is.na(Heightin_6_8_24)) %>%            # Remove rows with no height measurements 
+  filter(!is.na(Heightin_12_2024)) %>%            # Remove rows with no height measurements 
   group_by(species, innoculation, plot_num) %>%
   summarise(
     mean_volume = mean(volume, na.rm = TRUE),  # Mean volume
     sd_volume = sd(volume, na.rm = TRUE),      # Standard deviation of volume
-    mean_height = mean(Heightin_6_8_24, na.rm = TRUE),  # Mean height
-    sd_height = sd(Heightin_6_8_24, na.rm = TRUE),      # Standard deviation of height
+    mean_height = mean(Heightin_12_2024, na.rm = TRUE),  # Mean height
+    sd_height = sd(Heightin_12_2024, na.rm = TRUE),      # Standard deviation of height
     n = n()  # Number of observations
   ) %>%
   mutate(
@@ -120,7 +125,7 @@ summary_data_growth_plot <- merged_data_all %>%
     se_height = sd_height / sqrt(n)   # Calculate standard error for height
   )
 
-colors_purples <- brewer.pal(9, "Purples")[5:7]  # Medium-dark shades of Purples
+  colors_purples <- brewer.pal(9, "Purples")[5:7]  # Medium-dark shades of Purples
 colors_oranges <- brewer.pal(9, "Oranges")[5:7]  # Medium-dark shades of Oranges
 custom_colors <- c(colors_purples, colors_oranges)
 
@@ -361,19 +366,6 @@ ggplot(summary_data_survival, aes(x = species, y = survival, fill = innoculation
   ) +
   theme_minimal() +
   theme(legend.position = "top")
-
-library(ggpubr)                           # Apply a minimal theme
-
-regression_stats <- data %>%
-  group_by(species) %>%
-  summarise(
-    intercept = coef(lm(y ~ x))[1],       # Intercept
-    slope = coef(lm(y ~ x))[2],           # Slope
-    r_squared = summary(lm(y ~ x))$r.squared,  # R-squared
-    p_value = summary(lm(y ~ x))$coefficients[2, 4] # P-value for slope
-  )
-
-print(regression_stats)
 
 
 library(lme4)
