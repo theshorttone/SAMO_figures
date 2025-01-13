@@ -1,3 +1,6 @@
+
+# intro -------------------------------------------------------------------
+
 library(readxl)
 library(tidyverse)
 if (!require("RColorBrewer")) {
@@ -5,10 +8,14 @@ if (!require("RColorBrewer")) {
   library(RColorBrewer)
 }
 
-# purple_pal <- colorRampPalette(brewer.pal("Purples"))
-# orange_pal <-colorRampPalette(brewer.pal("Oranges"))
+# data call ---------------------------------------------------------------
+
 colonization_data <- read_excel("/Users/zacharyshortt/Desktop/DNA_work_SMM/Colonization_data.xlsx")
 master_data <-read_excel("/Users/zacharyshortt/Desktop/DNA_work_SMM/Master_dataaa.xlsx")
+
+
+
+# data manipulation, column renaming, ect ---------------------------------
 
 combined_coldata <- colonization_data %>%
   group_by(`Tree code`) %>%
@@ -47,7 +54,10 @@ merged_data_all <- merged_data_all %>%
     volume = (1/3) * pi * (radius^2) * Heightin_12_2024  # Volume calculation
   )
 
-# Plot the volume against species using ggplot2
+
+
+# Volume bar vs. species graph----------------------------------------------------------------
+
 ggplot(merged_data_all, aes(x = species, y = volume, fill = species)) +
   geom_bar(stat = "identity") +
   labs(
@@ -58,8 +68,20 @@ ggplot(merged_data_all, aes(x = species, y = volume, fill = species)) +
   theme_minimal() +
   theme(legend.position = "none")
 
-# Plot volume by species and innoculation status 
-# Step 1: Calculate mean and standard error for each species and inoculation status
+ggsave("Figures.mean_species_volume")
+
+# volume, species by innoc bar chart with error bars ---------------------------------------------------------
+
+ggplot(summary_data_growth, aes(x = species, y = mean_volume, fill = innoculation)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +  # Adjust dodge and bar width
+  geom_errorbar(  aes(ymin = mean_volume - se_volume, ymax = mean_volume + se_volume),
+                  position = position_dodge(width = 0.8), width = 0.6)+
+  labs(
+    x = "Species",
+    y = "Mean Volume (cm³)"
+  )
+
+# Calculating mean and standard error for each species and inoculation status
 summary_data_growth <- merged_data_all %>%
   filter(!is.na(Heightin_12_2024)) %>%  # Ensure no NAs in height variable
   group_by(species, innoculation) %>%
@@ -92,6 +114,10 @@ ggplot(summary_data_growth, aes(x = species, y = mean_volume, fill = innoculatio
   theme_minimal() +
   theme(legend.position = "top")
 
+
+
+# hight, species by innoc bar chart with error bars-------------------------------------------------
+
 # Plot height, species, color by innoc
 ggplot(summary_data_growth, aes(x = species, y = mean_height, fill = innoculation)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +  # Adjust dodge and bar width
@@ -101,15 +127,17 @@ ggplot(summary_data_growth, aes(x = species, y = mean_height, fill = innoculatio
     width = 0.25  # Width of the error bars
   ) +
   labs(
-    title = "Tree Height by Species and Inoculation Status with Error Bars",
     x = "Species",
-    y = "Mean Height (cm³)",
+    y = "Mean Height (cm)",
     fill = "Inoculation Status"
   ) +
   theme_minimal() +
   theme(legend.position = "top")
 
-##separate out by plot now too
+ggsave("Figures.species_mean_ height")
+
+# sumamry data for height by plot------------------------------------------------
+
 summary_data_growth_plot <- merged_data_all %>%
   filter(!is.na(Heightin_12_2024)) %>%            # Remove rows with no height measurements 
   group_by(species, innoculation, plot_num) %>%
@@ -125,7 +153,9 @@ summary_data_growth_plot <- merged_data_all %>%
     se_height = sd_height / sqrt(n)   # Calculate standard error for height
   )
 
-  colors_purples <- brewer.pal(9, "Purples")[5:7]  # Medium-dark shades of Purples
+
+# color scheme for figures  -----------------------------------------------
+colors_purples <- brewer.pal(9, "Purples")[5:7]  # Medium-dark shades of Purples
 colors_oranges <- brewer.pal(9, "Oranges")[5:7]  # Medium-dark shades of Oranges
 custom_colors <- c(colors_purples, colors_oranges)
 
@@ -141,7 +171,10 @@ color_mapping <- c("3" = custom_colors[1],
 summary_data_growth_plot <- summary_data_growth_plot  %>%
   mutate(plot_num = factor(plot_num, levels = c(3, 6, 8, 4, 5, 7)))
 
-# Plot height 
+
+
+# plotting height, plot species  ------------------------------------------
+
 ggplot(summary_data_growth_plot, aes(x = species, y = mean_height, fill = plot_num)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
   geom_errorbar(
@@ -201,6 +234,11 @@ ggplot(summary_data_growth_plot, aes(x = species, y = mean_volume, fill = plot_n
                         "7"= "7 control")
   )
 ###
+
+
+# removing NA rows for colonization  -------------------------------------------
+
+
 summary_data_col <- merged_data_all %>%
   filter(!is.na(percent_col)) %>%            # Remove rows with NA in percent_col
   group_by(species, innoculation) %>%
@@ -212,6 +250,9 @@ summary_data_col <- merged_data_all %>%
   mutate(
     se_col = sd_col / sqrt(n - 1)  # Calculate standard error (SE)
   )
+
+
+# colonization across innoc and species  ---------------------------------------------------------------
 
 
 ggplot(summary_data_col, aes(x = species, y = col_avg, fill = innoculation)) +
@@ -230,11 +271,13 @@ ggplot(summary_data_col, aes(x = species, y = col_avg, fill = innoculation)) +
   theme_minimal() +
   theme(legend.position = "top")
 
-#separate averages by plot now for colonization 
 summary_data_col_plot <- merged_data_all %>%
   filter(!is.na(percent_col)) %>%            # Remove rows with NA in percent_col
   group_by(species, innoculation, plot_num) %>%
   summarise(
+
+# more data management, remove the top plots ---------------------------------------------------
+
     
     col_avg = mean(percent_col, na.rm = TRUE),  # Mean colonization
     sd_col = sd(percent_col, na.rm = TRUE),     # Standard deviation
@@ -244,24 +287,6 @@ summary_data_col_plot <- merged_data_all %>%
     se_col = sd_col / sqrt(n - 1)  # Calculate standard error (SE)
   )
 
-# ggplot(summary_data_col_plot, aes(x = species, y = col_avg, fill = plot_num)) +
-#   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
-#   geom_errorbar(
-#     aes(ymin = col_avg - se_col, ymax = col_avg + se_col),
-#     position = position_dodge(width = 0.8),
-#     width = 0.25
-#   ) +
-#   labs(
-#     title = "Tree colonization by Species and Inoculation Status with Error Bars",
-#     x = "Species",
-#     y = "Mean Colonization (%)",
-#     fill = "Plot Number"  # Adjust legend title
-#   ) +
-#   scale_fill_manual(values = c("1b" = "grey", "2b" = "grey", "2a" = "grey", "3"= "blue", "4" = "red", "5" = "red", "6" = "blue", "7"= "red", "8" = "blue")) +  # Customize colors
-#   theme_minimal() +
-#   theme(legend.position = "top")
-
-# Filter out plot numbers 1b, 2a, and 2b
 summary_data_col_plot_filtered <- summary_data_col_plot %>%
   filter(!plot_num %in% c("1b", "2a", "2b"))
 
@@ -269,7 +294,9 @@ summary_data_col_plot_filtered <- summary_data_col_plot %>%
 summary_data_col_plot_filtered <- summary_data_col_plot_filtered %>%
   mutate(plot_num = factor(plot_num, levels = c(3, 6, 8, 4, 5, 7)))
 
-# Plot
+# plotting colonization by plots  -----------------------------------------
+
+
 ggplot(summary_data_col_plot_filtered, aes(x = species, y = col_avg, fill = plot_num)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
   geom_errorbar(
@@ -299,7 +326,8 @@ ggplot(summary_data_col_plot_filtered, aes(x = species, y = col_avg, fill = plot
                        "7"= "7 control")
                     )
 
-##############
+
+# broken idk  -----------------------------------------
 
 
 ggplot(summary_data, aes(x = species, y = mean_volume, fill = innoculation)) +
@@ -318,7 +346,6 @@ ggplot(summary_data, aes(x = species, y = mean_volume, fill = innoculation)) +
   theme_minimal() +
   theme(legend.position = "top")
 
-##Now all the data should be downloaded, below is graph creation 
 
 
 ggplot(merged_data_all, aes(x = species, fill = survival)) +
@@ -329,8 +356,10 @@ ggplot(merged_data_all, aes(x = species, fill = survival)) +
   theme_minimal()
 # Sample data frame
 
-##calculating percent survival for each species, and corresponding chi squared 
-#####SURVIVAL DATA 
+##calculating percent survival for each species,
+
+# percent survival calcualtions -------------------------------------------
+
 summary_data_survival <- merged_data_all %>%
   group_by(plot_num, species, innoculation) %>%  
   filter(!is.na(survival)) %>% # Group by both variables
@@ -351,6 +380,10 @@ summary_data_survival <- summary_data_survival%>%
     se_survival = sd_survival / sqrt(n)
   )
 
+
+# survival plot -----------------------------------------------------------
+
+
 ggplot(summary_data_survival, aes(x = species, y = survival, fill = innoculation)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +  # Adjust dodge and bar width
   geom_errorbar(
@@ -361,7 +394,7 @@ ggplot(summary_data_survival, aes(x = species, y = survival, fill = innoculation
   labs(
     #title = "",
     x = "Species",
-    y = "Mean Volume (cm³)",
+    y = "survival",
     fill = "Inoculation Status"
   ) +
   theme_minimal() +
